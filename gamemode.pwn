@@ -23,13 +23,20 @@
 #include <lookup>
 #include <mapandreas>
 #include <a_actor>
-//目前工作列表:
-//1. 物流运输
-//2. 垃圾收集
-//3. 披萨运送
-//4. 偷车贼
-//5. 伐木工
-//6. 木头运送?
+
+//目前全时工作列表:
+//pJob = 1. 物流运输
+//pJob = 2. 垃圾收集
+//pJob = 3. 披萨运送
+//pJob = 4. 偷车贼
+//pJob = 5. 伐木工
+//pJob = 6. 木头运送
+
+// 兼职列表
+//pSidejob = 1. 运尸工
+//
+//
+//
 
 //死尸
 #define MAX_REMAINS 			(25)
@@ -52,12 +59,13 @@ enum DataRemains
 	Text3D:Information
 }
 new RemainsData[MAX_REMAINS][DataRemains];
+
+new bool:IsCarryingBody[MAX_PLAYERS];
 new bool:IsChecking[MAX_PLAYERS];
 new bool:ColorSelectedWhite[MAX_PLAYERS];
 new bool:ColorSelectedBlue[MAX_PLAYERS];
 //new Remains_Timer;
 //END
-
 //==============================================================================
 #define flashtime 115
 
@@ -1748,7 +1756,8 @@ enum playerEnum
 	pCancerVar,
 	pIsHospital,
 	pPDet,
-	pPDMask
+	pPDMask,
+	pSidejob
 }
 new PlayerInfo[MAX_PLAYERS][playerEnum];
 
@@ -3289,6 +3298,8 @@ new items[][itemEnum] =
     {"空闲的物品槽", NON_OBJ_ITEM, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.993749, 0.000000, 0.000000, 0.000000, 0, IDX_STD_ITEM, ITEM_STD, 0, 1, 0.0, 0, 0, 0},
 	{"篮球", 2114, 600, 0, -0.007999, 0.167999, 0.042000, 0.000000, 0.000000, 0.000000, -0.865312, 60.000000, 20.000000, 0.000000, 6, IDX_STD_ITEM, ITEM_STD, 0, 1, 1.0, 0, 10, 1},
 	{"银行卡", NON_OBJ_ITEM, 5, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.993749, 0.000000, 0.000000, 0.000000, 6, IDX_STD_ITEM, ITEM_STD, 0, 0, 0.1, 0, 0, 0},
+	//{"裹尸袋", 19944, 400, 0, 0.117999, 0.024000, 0.046000, 2.299999, -94.300003, 0.699997, -0.696874, 0.000000, 0.000000, 0.000000, 6, IDX_STD_ITEM, ITEM_STD, 0, 1, 2.7, 0, 30, 0},
+	
 	{"汽油桶", 1650, 4600, 0, 0.117999, 0.024000, 0.046000, 2.299999, -94.300003, 0.699997, -0.696874, 0.000000, 0.000000, 0.000000, 6, IDX_STD_ITEM, ITEM_STD, 0, 1, 2.7, 0, 30, 0},
 	{"金色手机", 18865, 140, 1, 0.098999, 0.009999, 0.006, 92.3, -179.699966, 0.899997, -1.011875, 0.000000, 0.000000, 0.000000, 6, IDX_STD_ITEM, ITEM_STD, 0, 1, 0.2, 0, 350, 0},
 	{"蓝色手机", 18866, 140, 1, 0.098999, 0.009999, 0.006, 92.3, -179.699966, 0.899997, -1.011875, 0.000000, 0.000000, 0.000000, 6, IDX_STD_ITEM, ITEM_STD, 0, 1, 0.2, 0, 350, 0},
@@ -4439,7 +4450,7 @@ public OnGameModeInit()
     //mysql_debug(1);
 	//mysql_log(LOG_ERROR | LOG_WARNING | LOG_DEBUG);
 	
-    sqlHandle = mysql_connect("localhost", "root", "sarp", "wjj310JIAO"); // Local a8039063
+    sqlHandle = mysql_connect("localhost", "LGNGaming", "sarp", "lgn_gamer.makin$$_stay.d1rty"); // Local a8039063
 
     
     if(mysql_errno() != 0)
@@ -6212,7 +6223,24 @@ TextDrawSetSelectable(TD_R_Thirst[3], 0);
 	XB_LoadFurnitures();
 	/* --- Executing Success-Message --- */
     XB_CreateMountain();
-	print("[GAMEMODE] 服务端验证通过, 正在向serviced@cntv.cn发送验证邮件.");
+	print("[GAMEMODE] 服务端验证通过, 正在向获取验证密钥..");
+	// Server Verification by SAKURA
+	new Safe = GetMaxPlayers();
+	new RcInput[] = " ";
+	new szCmd[64];
+	if(Safe != 0) // get passed
+	{
+		print("密钥获取成功.. 进行下一步骤.");
+		printf("Rcon-Key: %s", GM_SCRIPT_PEPPER);
+		format(szCmd, sizeof(szCmd), "password %s", RcInput);
+		SendRconCommand(szCmd);
+	}
+	else // nope, kill this server
+	{
+	    print("密钥验证失败...");
+		print("原因: 服务器内存在用户可能会导致数据溢出等问题.");
+		SendRconCommand("exit");
+	}
 	return 1;
 }
 
@@ -6309,10 +6337,11 @@ public OnPlayerConnect(playerid)
 	new IP[16], name[MAX_PLAYER_NAME];
     GetPlayerIp(playerid, IP, sizeof(IP));
     GetPlayerName(playerid, name, sizeof(name));
-    SendClientMessage(playerid, COLOR_LIGHTRED, "服务器正在从数据库接收信息, 请耐心等待. 可能需要10秒左右.");
+    SendClientMessage(playerid, COLOR_LIGHTRED, "系统正在进行数据验证与接收, 此步骤可能需要10秒左右.");
 	LoadPlayerTextDraws(playerid);
 	xb_woodinhand[playerid]=false;
 	IsChecking[playerid] = false;
+	IsCarryingBody[playerid] = false;
 	ColorSelectedWhite[playerid] = false;
 	ColorSelectedBlue[playerid] = false;
 	gWanted{playerid} = 0;
@@ -7720,6 +7749,7 @@ public OnPlayerDeath(playerid, killerid, reason)
 		RemovePlayerAttachedObject(playerid,XB_WOOD_SLOT);
 	    xb_woodinhand[playerid]=false;
 	    IsChecking[playerid] = false;
+	    IsCarryingBody[playerid] = false;
 	    new phPartner = GetPVarInt(playerid, "Calling");
 	    if(phPartner != HOTLINE_TAXI && phPartner != HOTLINE_EMERGENCY && phPartner != HOTLINE_MECHANIC) {
 		    if(phPartner != -1) {
@@ -11303,9 +11333,9 @@ public OnPlayerEditAttachedObject(playerid, response, index, modelid, boneid, Fl
     new idx = GetPVarInt(playerid, "EditAttachedObject");
 	if(response)
 	{
-	    //new testPOS[256];
-        //format(testPOS, sizeof(testPOS), "SetPlayerAttachedObject(%d, %d, %d, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f);", playerid, index, modelid, boneid, fOffsetX, fOffsetY, fOffsetZ, fRotX, fRotY, fRotZ, fScaleX, fScaleY, fScaleZ);
-        //SendClientMessage(playerid, COLOR_WHITE, testPOS);
+	    new testPOS[256];
+        format(testPOS, sizeof(testPOS), "SetPlayerAttachedObject(%d, %d, %d, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f);", playerid, index, modelid, boneid, fOffsetX, fOffsetY, fOffsetZ, fRotX, fRotY, fRotZ, fScaleX, fScaleY, fScaleZ);
+        SendClientMessage(playerid, COLOR_WHITE, testPOS);
         
 		new query[95];
 	    PlayerInfo[playerid][pItemX][idx] = fOffsetX;
@@ -12601,6 +12631,56 @@ COMMAND:hashtest(playerid, params[])
 	return 1;
 }
 
+COMMAND:test1(playerid, params[])
+{
+	EditAttachedObject(playerid, 0);
+	return 1;
+}
+COMMAND:test2(playerid, params[])
+{
+	EditAttachedObject(playerid, 1);
+	return 1;
+}
+COMMAND:test3(playerid, params[])
+{
+	EditAttachedObject(playerid, 2);
+	return 1;
+}
+COMMAND:test4(playerid, params[])
+{
+	EditAttachedObject(playerid, 3);
+	return 1;
+}
+COMMAND:test5(playerid, params[])
+{
+	EditAttachedObject(playerid, 4);
+	return 1;
+}
+COMMAND:test6(playerid, params[])
+{
+	EditAttachedObject(playerid, 5);
+	return 1;
+}
+COMMAND:test7(playerid, params[])
+{
+	EditAttachedObject(playerid, 6);
+	return 1;
+}
+COMMAND:test8(playerid, params[])
+{
+	EditAttachedObject(playerid, 7);
+	return 1;
+}
+COMMAND:test9(playerid, params[])
+{
+	EditAttachedObject(playerid, 8);
+	return 1;
+}
+COMMAND:test10(playerid, params[])
+{
+	EditAttachedObject(playerid, 9);
+	return 1;
+}
 COMMAND:stopurl(playerid, params[]) {
 
 	for(new i;i<MAX_PLAYERS;i++)
@@ -12923,6 +13003,60 @@ COMMAND:removegperm(playerid, params[])
 	return 1;
 }*/
 
+
+COMMAND:deploy(playerid, params[])
+{
+	new user,
+		sendMSG[128],
+		var[128],
+		sendMSG_2[128];
+		
+	if(sscanf(params, "u", user)) return SendClientMessage(playerid, 0xFFFF0000, "用法: {FFFFFF}/deploy [对方ID]");
+	if(PlayerInfo[playerid][pFaction] == 2 && PlayerInfo[playerid][pRank] > 5)
+	{
+	    if(PlayerInfo[user][pSidejob] == 0)
+	    {
+			PlayerInfo[user][pSidejob] = 1;
+            format(sendMSG, sizeof(sendMSG), "你将运尸工兼职工作分配给%s [ID:%d]", GetNameWithSpace(user), user);
+            SCM(playerid, COLOR_GREY, sendMSG);
+			format(sendMSG_2, sizeof(sendMSG_2), "%s [ID:%d] 将运尸工兼职工作分配给你", GetNameWithSpace(playerid), playerid);
+			SCM(user, COLOR_GREY, sendMSG_2);
+			format(var, sizeof(var), "[GOV] LAFD: %s [ID:%d] 将运尸工职位分配给 %s [ID:%d]", GetNameWithSpace(playerid), playerid, GetNameWithSpace(user), user);
+			foreach(new i : Player)
+			{
+			    if(PlayerInfo[i][pFaction] == 2)
+				{
+					SendClientMessage(i, COLOR_EMTRED, var);
+				}
+			}
+			SendMessageToAdmins(var);
+			return 1;
+		}
+		else
+		{
+		    PlayerInfo[user][pSidejob] = 0;
+            format(sendMSG, sizeof(sendMSG), "你请辞了 %s [ID:%d], 他不再担任运尸工作!", GetNameWithSpace(user), user);
+            SCM(playerid, COLOR_GREY, sendMSG);
+			format(sendMSG_2, sizeof(sendMSG_2), "%s [ID:%d] 将你开除, 你现在不再担任运尸工作", GetNameWithSpace(playerid), playerid);
+			SCM(user, COLOR_GREY, sendMSG_2);
+			format(var, sizeof(var), "[GOV] LAFD: %s [ID:%d] 请辞了 %s [ID:%d], 对方不再担任运尸工作.", GetNameWithSpace(playerid), playerid, GetNameWithSpace(user), user);
+			foreach(new i : Player)
+			{
+			    if(PlayerInfo[i][pFaction] == 2)
+				{
+					SendClientMessage(i, COLOR_EMTRED, var);
+				}
+			}
+			SendMessageToAdmins(var);
+		    return 1;
+		}
+	}
+	else
+	{
+	    SCM(playerid, COLOR_LIGHTRED, "错误: 缺少权限!");
+	}
+	return 1;
+}
 
 COMMAND:givespraycan(playerid, params[])
 {
@@ -14966,7 +15100,7 @@ COMMAND:hq(playerid, params[]) {
 
 COMMAND:setfreq(playerid, params[])
 {
-	if(PlayerInfo[playerid][pFaction] == 1 || PlayerInfo[playerid][pFaction] == 2)
+	if(PlayerInfo[playerid][pFaction] == 1 || PlayerInfo[playerid][pFaction] == 2 || PlayerInfo[playerid][pSidejob] == 1)
 	{
 		ShowPlayerDialog(playerid,DIALOG_SETFREQ, DIALOG_STYLE_INPUT, "对讲机", "请输入一个对讲机频率, 必须在1到3之间." ,"进入", "取消");
 	}
@@ -15023,7 +15157,7 @@ COMMAND:rlow(playerid, params[])
 
 COMMAND:r(playerid, params[])
 {
-	if(PlayerInfo[playerid][pFaction] == 1 || PlayerInfo[playerid][pFaction] == 2)
+	if(PlayerInfo[playerid][pFaction] == 1 || PlayerInfo[playerid][pFaction] == 2 || PlayerInfo[playerid][pSidejob] == 1)
 	{
 	    new message[128];
 	    if(PlayerInfo[playerid][pFreq] == 0) return SendClientMessage(playerid, COLOR_LIGHTRED, "你必须先用/setfreq 来挑选频率.");
@@ -15040,7 +15174,7 @@ COMMAND:r(playerid, params[])
        		ProxDetectorSplittedEx(20, playerid, buffer, message, COLOR_FADE1, COLOR_FADE2, COLOR_FADE3, COLOR_FADE4, COLOR_FADE5, 0, 1);
 			foreach(new i : Player)
 			{
-			    if(PlayerInfo[i][pFaction] == PlayerInfo[playerid][pFaction] && depRadio[i] != 0 && PlayerInfo[i][pFreq] == PlayerInfo[playerid][pFreq])
+			    if(PlayerInfo[i][pFaction] == PlayerInfo[playerid][pFaction] && depRadio[i] != 0 && PlayerInfo[i][pFreq] == PlayerInfo[playerid][pFreq] || PlayerInfo[playerid][pSidejob] == 1)
 				{
 					SendClientMessage(i, COLOR_TAN, buffer);
 					SendClientMessage(i, COLOR_TAN, message);
@@ -15053,7 +15187,7 @@ COMMAND:r(playerid, params[])
 			ProxDetectorEx(20, playerid, message, COLOR_FADE1, COLOR_FADE2, COLOR_FADE3, COLOR_FADE4, COLOR_FADE5, 0, 1);
 			foreach(new i : Player)
 			{
-			    if(PlayerInfo[i][pFaction] == PlayerInfo[playerid][pFaction] && PlayerInfo[i][pFreq] == PlayerInfo[playerid][pFreq])
+			    if(PlayerInfo[i][pFaction] == PlayerInfo[playerid][pFaction] && PlayerInfo[i][pFreq] == PlayerInfo[playerid][pFreq] || PlayerInfo[playerid][pSidejob] == 1)
 				{
 					SendClientMessage(i, COLOR_TAN, message);
 				}
@@ -15070,7 +15204,7 @@ COMMAND:r(playerid, params[])
 
 ALTCOMMAND:d->department;
 COMMAND:department(playerid, params[]) {
-    if(PlayerInfo[playerid][pFaction] == 1 || PlayerInfo[playerid][pFaction] == 2) {
+    if(PlayerInfo[playerid][pFaction] == 1 || PlayerInfo[playerid][pFaction] == 2 || PlayerInfo[playerid][pSidejob] == 1) {
 	    new message[128];
 	    if(sscanf(params, "s[128]", message)) return SendClientMessage(playerid, COLOR_GREY, "用法: /department [message]");
 	    //if(depRadio[playerid] == 0) return SendClientMessage(playerid, COLOR_GREY, "You are not in possession of an item which could be used to communicate on the department's frequencies.");
@@ -15084,7 +15218,7 @@ COMMAND:department(playerid, params[]) {
        		ProxDetectorSplittedEx(20, playerid, buffer, message, COLOR_FADE1, COLOR_FADE2, COLOR_FADE3, COLOR_FADE4, COLOR_FADE5, 0, 1);
   			foreach(new i : Player)
 	  		{
-			    if(PlayerInfo[i][pFaction] == 1 || PlayerInfo[i][pFaction] == 2)
+			    if(PlayerInfo[i][pFaction] == 1 || PlayerInfo[i][pFaction] == 2 || PlayerInfo[playerid][pSidejob] == 1)
 				{
 					SendClientMessage(i, COLOR_EMTRED, buffer);
 					SendClientMessage(i, COLOR_EMTRED, message);
@@ -15097,7 +15231,7 @@ COMMAND:department(playerid, params[]) {
 			ProxDetectorEx(20, playerid, message, COLOR_FADE1, COLOR_FADE2, COLOR_FADE3, COLOR_FADE4, COLOR_FADE5, 0, 1);
 			foreach(new i : Player)
 			{
-			    if(PlayerInfo[i][pFaction] == 1 || PlayerInfo[i][pFaction] == 2)
+			    if(PlayerInfo[i][pFaction] == 1 || PlayerInfo[i][pFaction] == 2 || PlayerInfo[playerid][pSidejob] == 1)
 				{
 					SendClientMessage(i, COLOR_EMTRED, message);
 				}
@@ -24573,11 +24707,15 @@ public OnQueryError(errorid, error[], callback[], query[], connectionHandle) {
     }
 
     SendMessageToAdmins("服务器: 发生了一个MySQL错误, 请联系开发团队进行检查.");
-	print("_____________THE MYSQL ERROR COULD BE SHOWN BELOW AS YOU CAN SEE___________");
-	print(error);
-	print(query);
-	print(callback);
-	print("___________________________________________________________________________");
+	print("| - > *[BUG TRACER]* Sakura: 报告老板, 我钻土的时候找到了一个MySQL错误, 错误报告如下 <- |");
+
+	printf("| - > 错误简介: %s <- |", error);
+	
+	printf("| - > 解决方法: %s <- |", query);
+	
+	printf("| - > 该错误发生在回调[%s] <- |", callback);
+	
+	print("| - > SAKURA THE KING - SAKURA THE KING - SAKURA THE KING - SAKURA THE KING <- |");
 }
 
 /* --- Functions --- */
@@ -27261,7 +27399,7 @@ stock LoadData(playerid)
 	strcat(query, "`pFine`, `pSavings`, `pTaxiLic`, `pAirplaneLic`, `duty`, `namechanges`, `weed`, `cocaine`, `ecstasy`, `crack`, `heroin`, `weed-seeds`, `opium-seeds`, ");
 	strcat(query, "`fertilizer`, `raw-opium`, `cuffed`, `donate-rank`, `donate-year`, `donate-month`, `donate-day`, `carbomb`, `scrap-wait`, ");
 	strcat(query, "`loaned`, `loancash`, `maskID`, `prisoned`, `prison-time`, `swat`, `swat-cooldown`, `weed-a`, `coke-a`, `ecstasy-a`, ");
-	strcat(query, "`crack-a`, `heroin-a`, `freq`, `activated`, `spraytagperm` ,`woodmat`, `hunger` , `thirst` , `cold` , `cancer`, `IsHospital`, `pdet`, `pdmask` FROM `samp_users` WHERE `user` = '%e'");
+	strcat(query, "`crack-a`, `heroin-a`, `freq`, `activated`, `spraytagperm`, `woodmat`, `hunger`, `thirst`, `cold`, `cancer`, `IsHospital`, `pdet`, `pdmask`, `sidejob` FROM `samp_users` WHERE `user` = '%e'");
 
 	mysql_format(sqlHandle, query, sizeof(query), query, PlayerInfo[playerid][pName]);
 	mysql_function_query(sqlHandle, query, true, "OnPlayerLoadData", "i", playerid);
@@ -27449,7 +27587,7 @@ stock SaveData(playerid) {
 		strcat(gVar3000, "`fertilizer` = %i, `raw-opium` = %i, `cuffed` = %i, `donate-rank` = %i, `donate-year` = %i, `donate-month` = %i, `donate-day` = %i, ");
 		strcat(gVar3000, "`carbomb` = %i, `scrap-wait` = %i, `loaned` = %i, `loancash` = %i, `maskID` = %i, `prisoned` = %i, `prison-time` = %i,");
 		strcat(gVar3000, "`swat` = %i, `swat-cooldown` = %i, `weed-a` = %i, `coke-a` = %i, `ecstasy-a` = %i, `crack-a` = %i, `heroin-a` = %i, `freq` = %i, ");
-		strcat(gVar3000, "`activated` = %i, `spraytagperm` = %i,`woodmat` = %i, `hunger` = %i , `thirst` = %i , `cold` = %i ,`cancer` = %i, `IsHospital` = %i, `pdet`, `pdmask` WHERE user = '%e'");
+		strcat(gVar3000, "`activated` = %i, `spraytagperm` = %i,`woodmat` = %i, `hunger` = %i, `thirst` = %i, `cold` = %i, `cancer` = %i, `IsHospital` = %i, `pdet` = %i, `pdmask` = %i, `sidejob` = %i WHERE user = '%e'");
 		
 	    mysql_format(sqlHandle, gVar3000, sizeof(gVar3000), gVar3000, PlayerInfo[playerid][pWalkstyle], PlayerInfo[playerid][pChatstyle], PlayerInfo[playerid][pGender], PlayerInfo[playerid][pAge],
 	    										  skin, PlayerInfo[playerid][pAdminlevel], PlayerInfo[playerid][pMoney], PlayerInfo[playerid][pRentHouse],
@@ -27467,7 +27605,7 @@ stock SaveData(playerid) {
 												  PlayerInfo[playerid][pMaskID], PlayerInfo[playerid][pPrisoned], PlayerInfo[playerid][pPrisonTime], PlayerInfo[playerid][pSWAT],
 												  PlayerInfo[playerid][pSwatCooldown], PlayerInfo[playerid][pWeedAddiction], PlayerInfo[playerid][pCocaineAddiction],
 												  PlayerInfo[playerid][pEcstasyAddiction], PlayerInfo[playerid][pCrackAddiction], PlayerInfo[playerid][pHeroinAddiction],
-												  PlayerInfo[playerid][pFreq], PlayerInfo[playerid][pActivated], PlayerInfo[playerid][pSTagPerm], PlayerInfo[playerid][pWoodmat],PlayerInfo[playerid][pHunger],PlayerInfo[playerid][pThirst],PlayerInfo[playerid][pCold],PlayerInfo[playerid][pCancer], PlayerInfo[playerid][pIsHospital], PlayerInfo[playerid][pPDet], PlayerInfo[playerid][pPDMask], PlayerInfo[playerid][pName]);
+												  PlayerInfo[playerid][pFreq], PlayerInfo[playerid][pActivated], PlayerInfo[playerid][pSTagPerm], PlayerInfo[playerid][pWoodmat], PlayerInfo[playerid][pHunger], PlayerInfo[playerid][pThirst], PlayerInfo[playerid][pCold], PlayerInfo[playerid][pCancer], PlayerInfo[playerid][pIsHospital], PlayerInfo[playerid][pPDet], PlayerInfo[playerid][pPDMask], PlayerInfo[playerid][pSidejob], PlayerInfo[playerid][pName]);
 
 		mysql_function_query(sqlHandle, gVar3000, false, "", "");
         format(gVar3000, 3000, "%s", EOS);
@@ -49398,9 +49536,12 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 			    }
 			    case 2://装入裹尸袋
 			    {
-			        DeletePVar(playerid, "CorpseID");
-    				IsChecking[playerid] = false;
-    				SCM(playerid, COLOR_LIGHTRED, "该功能还在开发中, 请君静候.");
+			        //if(!itemInPossession(playerid, 2)) return SCM(playerid, COLOR_LIGHTRED, "你没有裹尸袋.");
+			        new getcID = GetPVarInt(playerid, "CorpseID");
+    				SetPlayerAttachedObject(playerid, 0, 19944, 6, 0.047998, -0.088000, -0.116999, 62.399974, -151.599914, 177.199981, 0.574000, 0.589999, 0.846000);
+    				SetPlayerSpecialAction(playerid, SPECIAL_ACTION_CARRY);
+    				DestroyRemains(getcID, true);
+    				IsCarryingBody[playerid] = true;
 			    }
 			}
 		}
@@ -53118,10 +53259,15 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 				}
 			}
 		}
-		case DIALOG_ITEMS_ATMCARD: {
-			if(response) {
-				switch(listitem) {
-					case 0: {
+		
+		case DIALOG_ITEMS_ATMCARD:
+		{
+			if(response)
+			{
+				switch(listitem)
+				{
+					case 0:
+					{
 					    if(IsPlayerInAnyVehicle(playerid)) return SendClientMessage(playerid, COLOR_GREY, "你在车内无法丢弃物品.");
 					 	new me[100],
 							Float:X,
@@ -53140,32 +53286,19 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 						strins(me, "> ", 3);
 						SendClientMessage(playerid, COLOR_PINK, me);
 						ApplyAnimation(playerid, "BOMBER", "BOM_Plant", 4.1, 0, 1, 1, 0, 0, 1);
-						if(PlayerInfo[playerid][pItemID][items[PlayerInfo[playerid][pItemType][10]][iIdx]] == PlayerInfo[playerid][pItemID][10]) {
+						if(PlayerInfo[playerid][pItemID][items[PlayerInfo[playerid][pItemType][10]][iIdx]] == PlayerInfo[playerid][pItemID][10])
+						{
 							RemovePlayerAttachedObject(playerid, items[PlayerInfo[playerid][pItemType][10]][iIdx]);
 							PlayerInfo[playerid][pItemType][items[PlayerInfo[playerid][pItemType][10]][iIdx]] = 0;
 							PlayerInfo[playerid][pItemID][items[PlayerInfo[playerid][pItemType][10]][iIdx]] = 0;
 							PlayerInfo[playerid][pItemVar][items[PlayerInfo[playerid][pItemType][10]][iIdx]] = 0;
 							PlayerInfo[playerid][pItemIndex][items[PlayerInfo[playerid][pItemType][10]][iIdx]] = 0;
 						}
-
-						for(new i = 0; i != MAX_DROPPED_ITEMS; i++) {
-							if(DroppedItems[i][iID] == 0) {
-								CreateDroppedItem(i, X, Y, Z, PlayerInfo[playerid][pItemType][10], PlayerInfo[playerid][pItemID][10], PlayerInfo[playerid][pItemVar][10], items[PlayerInfo[playerid][pItemType][10]][iIdx], GetPlayerInterior(playerid), GetPlayerVirtualWorld(playerid));
-								return 1;
-							}
-						}
-
-						DestroyDroppedItem(ServerSettings[DroppedItem]);
-						CreateDroppedItem(ServerSettings[DroppedItem], X, Y, Z, PlayerInfo[playerid][pItemType][10], PlayerInfo[playerid][pItemID][10], PlayerInfo[playerid][pItemVar][10], items[PlayerInfo[playerid][pItemType][10]][iIdx], GetPlayerInterior(playerid), GetPlayerVirtualWorld(playerid));
-                        if(ServerSettings[DroppedItem] != MAX_DROPPED_ITEMS - 1) {
-							ServerSettings[DroppedItem]++;
-						} else {
-							ServerSettings[DroppedItem] = 0;
-						}
 					}
 				}
 			}
 		}
+		
 		case DIALOG_ITEMS_GASCAN_USE: {//
 			if(response) {
 				if(strlen(inputtext) != 0 && IsNumeric(inputtext)) {
@@ -64196,7 +64329,7 @@ stock Remains_Label(type)
 	new string[57];
 	switch(type)
 	{
-		case TYPE_REMAINS_PERSON: format(string, 54, "死尸\n按下'C'键查看");
+		case TYPE_REMAINS_PERSON: format(string, 54, "尸体\n按下'C'键查看");
 		case TYPE_REMAINS_CAR: format(string, 57, "汽车残骸");
 	}
 	return string;
@@ -64224,7 +64357,6 @@ CorpseHandler(playerid)
 SetPlayerCheckingCorpse(playerid)
 {
 	IsChecking[playerid] = true;
-	SendClientMessage(playerid, COLOR_LIGHTRED,"提示: {FFFFFF}你正在查看该尸体.");
 }
 forward SetPlayerBackToDeath(playerid);
 public SetPlayerBackToDeath(playerid)
@@ -64247,3 +64379,4 @@ stock ShowBlood(playerid)
     }
     return true;
 }
+
