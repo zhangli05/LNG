@@ -1,0 +1,91 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                  ESX Legacy Server                 #
+#                Configuration File                 #
+# # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+######################################################
+#                 Network基本设置                    #
+######################################################
+# 监听端口（必须与防火墙/路由器开放端口一致）
+endpoint_add_tcp "0.0.0.0:30120"  # TCP通信端口
+endpoint_add_udp "0.0.0.0:30120"  # UDP通信端口
+
+######################################################
+#                 服务器标签与元数据                 #
+######################################################
+# 服务器标签（影响服务器列表分类搜索）
+sets tags "default, esx, esx legacy, official, roleplay"
+
+######################################################
+#                 可自定义配置项                    #
+######################################################
+# FiveM许可证密钥（必须从Keymaster获取）
+sv_licenseKey "1w2fafn0p6jziffryh1k8ncijz132tcr"
+
+# 服务器名称（显示在玩家服务器列表）
+sv_hostname "LAST RP TEST | ESX Legacy Server"
+
+# 项目元数据（显示在服务器详情页）
+sets sv_projectName " LAST RP TEST | [ESX Legacy]"
+sets sv_projectDesc "The official recipe of the most popular FiveM RP framework, containing Jobs, Housing, Vehicles & more!"
+
+# MySQL数据库连接（格式：mysql://用户:密码@地址/数据库名?参数）
+set mysql_connection_string "mysql://root@localhost/ESXLegacy_D5AABC?charset=utf8mb4"
+
+# 服务器图标（需将esxLogo.png放在resources目录）
+load_server_icon esxLogo.png
+
+# 最大玩家容量（根据服务器性能调整）
+sv_maxclients 48
+
+# 强制游戏版本（需与客户端版本匹配）
+sv_enforceGameBuild 3258
+
+######################################################
+#                 管理员权限系统                    #
+######################################################
+# 权限层级定义
+add_principal group.admin group.user
+
+# 管理员权限规则
+add_ace group.admin command allow       # 允许所有命令
+add_ace group.admin command.quit deny   # 禁止管理员使用/quit
+add_ace resource.es_extended command.add_ace allow
+add_ace resource.es_extended command.add_principal allow
+add_ace resource.es_extended command.remove_principal allow
+add_ace resource.es_extended command.stop allow
+
+# 添加管理员（identifier获取方式：https://forum.cfx.re/t/372370）
+add_principal identifier.fivem:226406 group.admin #mmad12
+
+######################################################
+#                 Voice语音系统配置                 #
+######################################################
+setr voice_enableRadioAnim 1       # 启用手持对讲机动画
+setr voice_useNativeAudio true     # 使用原生音频引擎
+setr voice_useSendingRangeOnly true# 启用语音距离衰减
+
+######################################################
+#                 安全反作弊配置                    #
+######################################################
+sv_enableNetworkedSounds false     # 禁用可疑网络音效
+sv_enableNetworkedScriptEntityStates false  # 防止实体状态篡改
+sv_enableNetworkedPhoneExplosions false     # 禁用手机爆炸漏洞
+sv_filterRequestControl 2          # 强化车辆控制权验证
+
+######################################################
+#                 基础资源加载顺序                  #
+######################################################
+# 强制加载必要基础资源
+ensure chat         # 聊天系统
+ensure hardcap      # 玩家连接限制
+ensure oxmysql      # MySQL数据库驱动
+
+# ESX Legacy Core
+# ----------
+ensure [core]
+
+# ESX Addons
+# ----------
+ensure [standalone]
+ensure [esx_addons]
